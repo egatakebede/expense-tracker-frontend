@@ -1,68 +1,46 @@
-document.addEventListener('DOMContentLoaded', () {});document.addEventListener("DOMContentLoaded", () => {
-  const token = localStorage.getItem("token");
-  const form = document.getElementById("expenseForm");
-  const list = document.getElementById("expensesList");
-  let editId = null; // Stores id of the expense being edited
+document.addEventListener("DOMContentLoaded", () => {
+  const signupForm = document.getElementById("signupForm");
+  const loginForm = document.getElementById("loginForm");
 
-  // Load all expenses
-  async function loadExpenses() {
-    const res = await get("/expenses/", token);
-    list.innerHTML = "";
-    res.expenses?.forEach(exp => {
-      const li = document.createElement("li");
-      li.innerText = `${exp.title} - $${exp.amount} (${exp.category})`;
-
-      // Edit button
-      const editBtn = document.createElement("button");
-      editBtn.innerText = "Edit";
-      editBtn.onclick = () => {
-        editId = exp.id;
-        form.title.value = exp.title;
-        form.amount.value = exp.amount;
-        form.category.value = exp.category;
-        form.notes.value = exp.notes;
-        form.spent_at.value = exp.spent_at.split("T")[0]; // show date only
-      };
-
-      // Delete button
-      const deleteBtn = document.createElement("button");
-      deleteBtn.innerText = "Delete";
-      deleteBtn.onclick = async () => {
-        await del(`/expenses/${exp.id}`, token);
-        loadExpenses();
-      };
-
-      li.appendChild(editBtn);
-      li.appendChild(deleteBtn);
-      list.appendChild(li);
-    });
-  }
-
-  // Form submit handler
-  if (form) {
-    form.addEventListener("submit", async (e) => {
+  // Signup form handler
+  if (signupForm) {
+    signupForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       const data = {
-        title: form.title.value,
-        amount: parseFloat(form.amount.value),
-        category: form.category.value,
-        notes: form.notes.value,
-        spent_at: new Date(form.spent_at.value).toISOString(),
+        name: signupForm.name.value,
+        email: signupForm.email.value,
+        password: signupForm.password.value,
       };
 
-      if (editId) {
-        // Update existing expense
-        await put(`/expenses/${editId}`, data, token);
-        editId = null; // reset edit state
-      } else {
-        // Create new expense
-        await post("/expenses/", data, token);
+      try {
+        const res = await post("/auth/signup", data);
+        document.getElementById("message").innerText = res.message || res.error;
+      } catch (err) {
+        document.getElementById("message").innerText = "Signup failed!";
       }
-
-      form.reset();
-      loadExpenses();
     });
   }
 
-  loadExpenses();
+  // Login form handler
+  if (loginForm) {
+    loginForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const data = {
+        email: loginForm.email.value,
+        password: loginForm.password.value,
+      };
+
+      try {
+        const res = await post("/auth/login", data);
+        if (res.token) {
+          localStorage.setItem("token", res.token);
+          window.location.href = "dashboard.html";
+        } else {
+          document.getElementById("message").innerText = res.error;
+        }
+      } catch (err) {
+        document.getElementById("message").innerText = "Login failed!";
+      }
+    });
+  }
 });
